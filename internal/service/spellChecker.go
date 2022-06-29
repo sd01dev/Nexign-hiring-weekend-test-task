@@ -5,13 +5,24 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"nexign/internal/model"
 	"strings"
+
+	"github.com/sd01dev/nexign/internal/model"
+
+	"go.uber.org/zap"
 )
 
 const spellerApiUrl = "https://speller.yandex.net/services/spellservice.json/checkTexts"
 
-func FixSpelling(givenText model.TextToCheck) (model.TextToCheck, error) {
+type Checker struct {
+	logger *zap.Logger
+}
+
+func NewChecker(logger *zap.Logger) *Checker {
+	return &Checker{logger: logger}
+}
+
+func (c *Checker) FixSpelling(givenText model.TextToCheck) (model.TextToCheck, error) {
 	textToCheck := url.Values{}
 	result := model.TextToCheck{}
 
@@ -23,12 +34,14 @@ func FixSpelling(givenText model.TextToCheck) (model.TextToCheck, error) {
 
 	rawBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
+		c.logger.Error("fail read response body", zap.Error(err))
 		return model.TextToCheck{}, err
 	}
 
 	var apiResp []model.SpellerApiResponse
 	err = json.Unmarshal(rawBody, &apiResp)
 	if err != nil {
+		c.logger.Error("unmarshalling fail", zap.Error(err))
 		return model.TextToCheck{}, err
 	}
 
